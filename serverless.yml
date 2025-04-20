@@ -1,0 +1,39 @@
+service: automator-api
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: sa-east-1
+  environment:
+    NODE_ENV: production
+    JWT_SECRET: ${ssm:/automator-api/jwt-secret}
+
+functions:
+  api:
+    handler: dist/index.handler
+    events:
+      - http:
+          path: /{proxy+}
+          method: any
+          cors: true
+
+plugins:
+  - serverless-offline
+  - serverless-dotenv-plugin
+
+custom:
+  serverless-offline:
+    httpPort: 4000
+  dotenv:
+    path: .env
+
+package:
+  patterns:
+    - '!node_modules/**'
+    - '!test/**'
+    - '!.git/**'
+    - '!.env'
+    - '!.gitignore'
+    - '!README.md'
+    - '!tsconfig.json'
+    - '!package-lock.json' 
