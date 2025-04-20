@@ -15,64 +15,115 @@ export class AuthService {
   }
 
   async register(userData: RegisterRequest): Promise<User> {
-    const existingUser = await this.dynamoService.getUserByEmail(userData.email);
-    if (existingUser) {
-      throw new Error('Email already registered');
+    try {
+      // Validação básica dos dados
+      if (!userData.email || !userData.password || !userData.name) {
+        throw new Error('Missing required fields');
+      }
+
+      // Validação de email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(userData.email)) {
+        throw new Error('Invalid email format');
+      }
+
+      // Validação de senha
+      if (userData.password.length < 6) {
+        throw new Error('Password must be at least 6 characters long');
+      }
+
+      const existingUser = await this.dynamoService.getUserByEmail(userData.email);
+      if (existingUser) {
+        throw new Error('Email already registered');
+      }
+
+      const passwordHash = await bcrypt.hash(userData.password, SALT_ROUNDS);
+      const user: User = {
+        id: uuidv4(),
+        email: userData.email,
+        passwordHash,
+        name: userData.name,
+        createdAt: new Date().toISOString(),
+      };
+
+      return this.dynamoService.createUser(user);
+    } catch (error) {
+      console.error('Registration error:', error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to register user');
     }
-
-    const passwordHash = await bcrypt.hash(userData.password, SALT_ROUNDS);
-    const user: User = {
-      id: uuidv4(),
-      email: userData.email,
-      passwordHash,
-      name: userData.name,
-      createdAt: new Date().toISOString(),
-    };
-
-    return this.dynamoService.createUser(user);
   }
 
   async login(credentials: AuthRequest): Promise<{ token: string; user: User }> {
-    const user = await this.dynamoService.getUserByEmail(credentials.email);
-    if (!user) {
-      throw new Error('Invalid credentials');
+    try {
+      if (!credentials.email || !credentials.password) {
+        throw new Error('Email and password are required');
+      }
+
+      const user = await this.dynamoService.getUserByEmail(credentials.email);
+      if (!user) {
+        throw new Error('Invalid credentials');
+      }
+
+      const isValidPassword = await bcrypt.compare(credentials.password, user.passwordHash);
+      if (!isValidPassword) {
+        throw new Error('Invalid credentials');
+      }
+
+      const payload: JWTPayload = {
+        userId: user.id,
+        email: user.email,
+      };
+
+      const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' });
+
+      // Create session
+      const session: Session = {
+        userId: user.id,
+        token,
+        deviceId: uuidv4(),
+        createdAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      };
+
+      await this.dynamoService.createSession(session);
+
+      return { token, user };
+    } catch (error) {
+      console.error('Login error:', error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to login');
     }
-
-    const isValidPassword = await bcrypt.compare(credentials.password, user.passwordHash);
-    if (!isValidPassword) {
-      throw new Error('Invalid credentials');
-    }
-
-    const payload: JWTPayload = {
-      userId: user.id,
-      email: user.email,
-    };
-
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' });
-
-    // Create session
-    const session: Session = {
-      userId: user.id,
-      token,
-      deviceId: uuidv4(), // In a real app, this would come from the client
-      createdAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-    };
-
-    await this.dynamoService.createSession(session);
-
-    return { token, user };
   }
 
   async logout(token: string): Promise<void> {
-    await this.dynamoService.deleteSession(token);
+    try {
+      await this.dynamoService.deleteSession(token);
+    } catch (error) {
+      console.error('Logout error:', error);
+      throw new Error('Failed to logout');
+    }
   }
 
   verifyToken(token: string): JWTPayload {
     try {
+      if (!JWT_SECRET) {
+        throw new Error('JWT secret is not configured');
+      }
       return jwt.verify(token, JWT_SECRET) as JWTPayload;
     } catch (error) {
-      throw new Error('Invalid token');
+      console.error('Token verification error:', error);
+      if (error instanceof jwt.JsonWebTokenError) {
+        throw new Error('Invalid token');
+      }
+      if (error instanceof jwt.TokenExpiredError) {
+        throw new Error('Token expired');
+      }
+      throw new Error('Failed to verify token');
     }
   }
 } 

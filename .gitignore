@@ -27,3 +27,6 @@ logs/
 
 # Testing
 coverage/ 
+
+# Scripts
+scripts/setup-dynamodb.sh

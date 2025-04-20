@@ -4,11 +4,15 @@ import { User, Goal, Session } from '../types';
 
 // Configuração do cliente DynamoDB
 const client = new DynamoDBClient({
-  region: process.env.AWS_REGION || 'sa-east-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-  },
+  region: process.env.AWS_REGION || 'us-east-1',
+  ...(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+    ? {
+        credentials: {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        },
+      }
+    : {}),
 });
 
 const docClient = DynamoDBDocumentClient.from(client);

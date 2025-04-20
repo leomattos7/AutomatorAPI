@@ -24,13 +24,21 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       return res.status(401).json(response);
     }
 
-    const payload = authService.verifyToken(token);
-    req.user = payload;
-    next();
+    try {
+      const payload = authService.verifyToken(token);
+      (req as any).user = payload;
+      next();
+    } catch (error) {
+      const response: ApiResponse<null> = {
+        success: false,
+        error: 'Invalid token',
+      };
+      return res.status(401).json(response);
+    }
   } catch (error) {
     const response: ApiResponse<null> = {
       success: false,
-      error: 'Invalid token',
+      error: 'Authentication failed',
     };
     return res.status(401).json(response);
   }
