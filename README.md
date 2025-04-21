@@ -29,7 +29,7 @@ npm install
 2. Create a `.env` file with the following variables:
 ```
 JWT_SECRET=your-secret-key
-AWS_REGION=us-east-1
+AWS_REGION=sa-east-1
 N8N_URL=your-n8n-instance-url
 ```
 
@@ -84,36 +84,125 @@ npm run build
 
 1. Deploy to AWS Lambda:
 ```bash
-serverless deploy
+npm run deploy
 ```
 
 ## API Endpoints
 
+Base URL: `https://6keepcn3p6.execute-api.us-east-1.amazonaws.com/dev`
+
 ### Authentication
 
-- `POST /auth/register` - Register a new user
-- `POST /auth/login` - Login and get JWT token
-- `POST /auth/logout` - Logout and invalidate token
-- `GET /auth/profile` - Get user profile (requires authentication)
+#### Register a new user
+- **Endpoint**: `POST /auth/register`
+- **Headers**: 
+  ```
+  Content-Type: application/json
+  ```
+- **Body**:
+  ```json
+  {
+    "email": "user@example.com",
+    "password": "Password@123",
+    "name": "User Name"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "email": "user@example.com",
+      "name": "User Name",
+      "createdAt": "2024-01-24T12:34:56.789Z"
+    }
+  }
+  ```
+
+#### Login
+- **Endpoint**: `POST /auth/login`
+- **Headers**: 
+  ```
+  Content-Type: application/json
+  ```
+- **Body**:
+  ```json
+  {
+    "email": "user@example.com",
+    "password": "Password@123"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "success": true,
+    "data": {
+      "token": "eyJhbGciOiJIUzI1NiIs...",
+      "user": {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "email": "user@example.com",
+        "name": "User Name"
+      }
+    }
+  }
+  ```
+
+#### Logout
+- **Endpoint**: `POST /auth/logout`
+- **Headers**: 
+  ```
+  Content-Type: application/json
+  Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+  ```
+- **Response**:
+  ```json
+  {
+    "success": true
+  }
+  ```
+
+#### Get User Profile
+- **Endpoint**: `GET /auth/profile`
+- **Headers**: 
+  ```
+  Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+  ```
+- **Response**:
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "email": "user@example.com",
+      "name": "User Name",
+      "createdAt": "2024-01-24T12:34:56.789Z"
+    }
+  }
+  ```
+
+### Error Responses
+
+All endpoints may return the following error responses:
+
+```json
+{
+  "success": false,
+  "error": "Error message"
+}
+```
+
+Common error messages:
+- `Missing required fields`
+- `Invalid email format`
+- `Password must be at least 6 characters long`
+- `Email already registered`
+- `Invalid credentials`
+- `No token provided`
+- `Invalid token`
+- `User not authenticated`
+- `User not found`
 
 ### App Features
 
-- `GET /app/data` - Get app data
-- `POST /app/track-goal` - Track goal progress
-- `PUT /app/update-user` - Update user information
-
-### n8n Integration
-
-- `POST /n8n/trigger/:id` - Trigger n8n workflow
-
-## Security
-
-- All sensitive routes require JWT authentication
-- Passwords are hashed with bcrypt
-- JWT tokens expire after 24 hours
-- CORS enabled for specific origins
-- Rate limiting implemented
-
-## License
-
-MIT 
+- `GET /app/data`

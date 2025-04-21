@@ -4,8 +4,9 @@ import { User, Goal, Session } from '../types';
 
 // Configuração do cliente DynamoDB
 const client = new DynamoDBClient({
-  region: process.env.AWS_REGION || 'us-east-1',
-  ...(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+  region: 'us-east-1',
+  // Usa credenciais apenas em ambiente local
+  ...(process.env.NODE_ENV === 'development' && process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
     ? {
         credentials: {
           accessKeyId: process.env.AWS_ACCESS_KEY_ID,

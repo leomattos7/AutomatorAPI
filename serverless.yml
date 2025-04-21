@@ -3,37 +3,51 @@ service: automator-api
 provider:
   name: aws
   runtime: nodejs18.x
-  region: sa-east-1
+  region: us-east-1
   environment:
-    NODE_ENV: production
-    JWT_SECRET: ${ssm:/automator-api/jwt-secret}
+    JWT_SECRET: ${env:JWT_SECRET}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:DescribeTable
+            - dynamodb:ListTables
+            - dynamodb:CreateTable
+            - dynamodb:DeleteTable
+          Resource: 
+            - "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Users"
+            - "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Goals"
+            - "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Sessions"
+            - "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Users/index/*"
+            - "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/*"
 
 functions:
   api:
-    handler: dist/index.handler
+    handler: dist/lambda.handler
     events:
       - http:
-          path: /{proxy+}
-          method: any
+          path: /auth/{proxy+}
+          method: ANY
+          cors: true
+      - http:
+          path: /app/{proxy+}
+          method: ANY
+          cors: true
+      - http:
+          path: /n8n/{proxy+}
+          method: ANY
           cors: true
 
 plugins:
   - serverless-offline
-  - serverless-dotenv-plugin
 
 custom:
   serverless-offline:
-    httpPort: 4000
-  dotenv:
-    path: .env
-
-package:
-  patterns:
-    - '!node_modules/**'
-    - '!test/**'
-    - '!.git/**'
-    - '!.env'
-    - '!.gitignore'
-    - '!README.md'
-    - '!tsconfig.json'
-    - '!package-lock.json' 
+    httpPort: 3000

@@ -126,4 +126,13 @@ export class AuthService {
       throw new Error('Failed to verify token');
     }
   }
+
+  async getUserById(id: string): Promise<User | null> {
+    try {
+      return await this.dynamoService.getUserById(id);
+    } catch (error) {
+      console.error('Error getting user by id:', error);
+      throw new Error('Failed to get user');
+    }
+  }
 } 
